@@ -10,7 +10,7 @@ const server = http.createServer(app);
 // Enable CORS for HTTP requests
 app.use(
   cors({
-    origin: "http://localhost:3000", // Allow requests from your frontend
+    origin: "https://mexico-tic-tac-toe.vercel.app/", // Allow requests from your frontend
     credentials: true, // Allow cookies and credentials
   })
 );
@@ -21,7 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 // Initialize Socket.IO
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:3000", // Allow WebSocket connections from your frontend
+    origin: "https://mexico-tic-tac-toe.vercel.app/", // Allow WebSocket connections from your frontend
     methods: ["GET", "POST"], // Allowed HTTP methods
     credentials: true, // Allow credentials
   },
