@@ -172,3 +172,46 @@ body {
     width: 90%;
   }
 }
+
+.notification {
+  background-color: #4caf50;
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  text-align: center;
+  animation: fadeIn 0.5s, fadeOut 0.5s 2.5s;
+}
+
+.waiting-message {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  padding: 15px;
+  margin: 15px 0;
+  text-align: center;
+  color: black;
+}
+
+.players-info {
+  display: flex;
+  justify-content: space-around;
+  margin: 15px 0;
+  background-color: #f8f9fa;
+  padding: 10px;
+  border-radius: 5px;
+  color: black;
+}
+
+.square {
+  cursor: default;
+}
+
+.square.clickable {
+  cursor: pointer;
+  background-color: #f8f9fa;
+}
+
+.square.clickable:hover {
+  background-color: #e9ecef;
+}

@@ -1,11 +1,28 @@
 import React from "react";
 import "./styles/Board.css";
 
-const Board = ({ board, makeMove }) => {
+const Board = ({
+  board,
+  makeMove,
+  isMyTurn = true,
+  gameStatus = "in-progress",
+}) => {
   const renderSquare = (index) => {
+    const value = board[index];
+    const isClickable = !value && isMyTurn && gameStatus === "in-progress";
+
     return (
-      <div className="square" onClick={() => makeMove(index)}>
-        {board[index]}
+      <div
+        className={`square ${isClickable ? "clickable" : ""}`}
+        onClick={() => isClickable && makeMove(index)}
+      >
+        {value === "X" ? (
+          <span className="x-mark">X</span>
+        ) : value === "O" ? (
+          <span className="o-mark">O</span>
+        ) : (
+          ""
+        )}
       </div>
     );
   };
