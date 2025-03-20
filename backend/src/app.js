@@ -3,8 +3,7 @@ const http = require("http");
 const socketIo = require("socket.io");
 const cors = require("cors");
 const gameRoutes = require("./routes/gameRoutes");
-const { query } = require("./db/index"); // Import the query function
-
+const { query } = require("./db/index");
 const app = express();
 const server = http.createServer(app);
 
@@ -13,8 +12,8 @@ const frontendUrl = "https://mexico-tic-tac-toe.vercel.app";
 // Enable CORS for HTTP requests
 app.use(
   cors({
-    origin: frontendUrl, // Ensure this matches your frontend URL exactly
-    credentials: true, // Allow cookies and credentials
+    origin: frontendUrl,
+    credentials: true,
   })
 );
 
@@ -24,9 +23,9 @@ app.use(express.urlencoded({ extended: true }));
 // Initialize Socket.IO
 const io = socketIo(server, {
   cors: {
-    origin: frontendUrl, // Ensure this matches your frontend URL exactly
-    methods: ["GET", "POST"], // Allowed HTTP methods
-    credentials: true, // Allow credentials
+    origin: frontendUrl,
+    methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 

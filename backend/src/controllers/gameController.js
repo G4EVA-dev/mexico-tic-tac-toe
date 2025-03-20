@@ -4,27 +4,59 @@ const Game = require("../models/gameModel");
 class GameController {
   constructor(io) {
     this.io = io;
+
+    // Set up socket handlers
+    this.setupSocketHandlers();
+  }
+
+  setupSocketHandlers() {
+    this.io.on("connection", (socket) => {
+      console.log("New client connected");
+
+      socket.on("joinGame", ({ gameId, player }) => {
+        console.log(`Player ${player} joining game ${gameId}`);
+        socket.join(gameId);
+      });
+
+      socket.on("gameJoined", async ({ gameId, player }) => {
+        console.log(`Game ${gameId} joined by ${player}`);
+
+        // Fetch the latest game state
+        const game = await Game.getGameById(gameId);
+        if (game) {
+          // Broadcast the updated game state to all clients in the game room
+          this.io.to(gameId).emit("gameUpdated", {
+            gameId,
+            game,
+          });
+        }
+      });
+
+      socket.on("disconnect", () => {
+        console.log("Client disconnected");
+      });
+    });
   }
 
   async createGame(req, res) {
     try {
-      const { player1 } = req.body;
+      const { player1, isAIGame = false } = req.body;
       const gameId = uuidv4();
 
-      // For AI games, set status to "in-progress" immediately
+      // Set initial status to waiting
       const initialStatus = "waiting";
 
       const newGame = await Game.createGame({
         gameId,
         player1,
-        player2: "AI", // Default to AI for single-player games
+        player2: isAIGame ? "AI" : null, // Set player2 to null for multiplayer games
         board: JSON.stringify(Array(9).fill("")),
         currentTurn: player1,
         status: initialStatus,
       });
 
-      // If it's an AI game, update the status to "in-progress" immediately after creation
-      if (newGame.player2 === "AI") {
+      // If it's an AI game, update the status to "in-progress" immediately
+      if (isAIGame) {
         newGame.status = "in-progress";
         await newGame.updateGame(
           newGame.board,
@@ -54,7 +86,7 @@ class GameController {
       }
 
       // Check if the game is already full
-      if (game.player2 !== "AI" && game.player2) {
+      if (game.player2 && game.player2 !== "AI" && game.player2 !== null) {
         return res.status(400).json({ error: "Game is already full" });
       }
 
@@ -63,11 +95,15 @@ class GameController {
       game.status = "in-progress";
       await game.updateGame(game.board, game.currentTurn, game.status);
 
-      // Respond with the updated game state
-      res.status(200).json(game);
+      // Fetch the updated game
+      const updatedGame = await Game.getGameById(gameId);
 
-      // Notify all clients that a player has joined the game
-      this.io.emit("playerJoined", { gameId, player });
+      // Respond with the updated game state
+      res.status(200).json(updatedGame);
+
+      // Notify all clients that a player has joined the game and broadcast the updated game state
+      this.io.to(gameId).emit("playerJoined", { gameId, player });
+      this.io.to(gameId).emit("gameUpdated", { gameId, game: updatedGame });
     } catch (error) {
       console.error("Failed to join game:", error);
       res.status(500).json({ error: "Failed to join game" });
@@ -111,19 +147,11 @@ class GameController {
         return res.status(404).json({ error: "Game not found" });
       }
 
-      // For AI games, set status to "in-progress" if it's still "waiting"
-      if (game.status === "waiting" && game.player2 === "AI") {
-        game.status = "in-progress";
-        await game.updateGame(game.board, game.currentTurn, "in-progress");
-      }
-
       // Check if the game is in progress
       if (game.status !== "in-progress") {
-        return res
-          .status(400)
-          .json({
-            error: `Game is not in progress. Current status: ${game.status}`,
-          });
+        return res.status(400).json({
+          error: `Game is not in progress. Current status: ${game.status}`,
+        });
       }
 
       // Check if it's the player's turn
@@ -155,7 +183,7 @@ class GameController {
         gameWinner = "draw";
       }
 
-      // Update the game in the database before AI move
+      // Update the game in the database
       await game.updateGame(
         JSON.stringify(board),
         game.currentTurn,
@@ -163,40 +191,62 @@ class GameController {
         gameWinner
       );
 
-      // If the game is against AI and it's AI's turn, make an AI move
+      // Fetch the updated game
+      const updatedGame = await Game.getGameById(gameId);
+
+      // Respond with the updated game state
+      res.status(200).json(updatedGame);
+
+      // Notify all clients about the move
+      this.io.to(gameId).emit("moveMade", {
+        gameId,
+        player,
+        position,
+        game: updatedGame,
+      });
+
+      // Only make AI move if player2 is explicitly "AI" and it's AI's turn and game is in progress
       if (
         game.player2 === "AI" &&
         game.currentTurn === "AI" &&
         game.status === "in-progress"
       ) {
-        const aiMove = this.getAIMove(board);
-        board[aiMove] = "O"; // AI always plays "O"
-        game.currentTurn = game.player1;
+        // Add a small delay to make the AI move feel more natural
+        setTimeout(async () => {
+          const aiMove = this.getAIMove(board);
+          board[aiMove] = "O"; // AI always plays "O"
+          game.currentTurn = game.player1;
 
-        // Check for a winner or draw after AI's move
-        const aiWinner = this.checkWinner(board);
-        if (aiWinner) {
-          game.status = "finished";
-          gameWinner = aiWinner === "X" ? game.player1 : game.player2;
-        } else if (!board.includes("")) {
-          game.status = "finished";
-          gameWinner = "draw";
-        }
+          // Check for a winner or draw after AI's move
+          const aiWinner = this.checkWinner(board);
+          if (aiWinner) {
+            game.status = "finished";
+            gameWinner = aiWinner === "X" ? game.player1 : game.player2;
+          } else if (!board.includes("")) {
+            game.status = "finished";
+            gameWinner = "draw";
+          }
 
-        // Update the game in the database after AI move
-        await game.updateGame(
-          JSON.stringify(board),
-          game.currentTurn,
-          game.status,
-          gameWinner
-        );
+          // Update the game in the database after AI move
+          await game.updateGame(
+            JSON.stringify(board),
+            game.currentTurn,
+            game.status,
+            gameWinner
+          );
+
+          // Fetch the updated game
+          const updatedAIGame = await Game.getGameById(gameId);
+
+          // Notify all clients about the AI move
+          this.io.to(gameId).emit("moveMade", {
+            gameId,
+            player: "AI",
+            position: aiMove,
+            game: updatedAIGame,
+          });
+        }, 500);
       }
-
-      // Respond with the updated game state
-      res.status(200).json(game);
-
-      // Notify all clients about the move
-      this.io.emit("moveMade", { gameId, player, position, game });
     } catch (error) {
       console.error("Failed to make move:", error);
       res.status(500).json({ error: "Failed to make move" });
