@@ -4,7 +4,10 @@ import Board from "./components/Board";
 import "./styles/App.css";
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:5000", {
+const backendUrl = "https://mexico-tic-tac-toe.onrender.com";
+console.log(`This is the ${backendUrl}`);
+
+const socket = io(`${backendUrl}`, {
   withCredentials: true, // Allow credentials
 });
 
@@ -43,7 +46,7 @@ const App = () => {
   const createGame = async (player1, isSinglePlayer = false) => {
     setIsLoading(true);
     try {
-      const response = await axios.post("http://localhost:5000/api/games", {
+      const response = await axios.post(`${backendUrl}/api/games`, {
         player1,
       });
       setGameId(response.data.gameId);
@@ -66,13 +69,10 @@ const App = () => {
   const joinGame = async (gameId, playerName) => {
     setIsLoading(true);
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/games/join",
-        {
-          gameId,
-          player: playerName,
-        }
-      );
+      const response = await axios.post(`${backendUrl}/api/games/join`, {
+        gameId,
+        player: playerName,
+      });
       setGameId(gameId);
       setPlayer(playerName);
       setGameState(response.data);
@@ -89,7 +89,7 @@ const App = () => {
     setIsLoading(true);
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/games/state/${gameId}`
+        `${backendUrl}/api/games/state/${gameId}`
       );
       setGameId(gameId);
       setGameState(response.data);
@@ -112,14 +112,11 @@ const App = () => {
     }
 
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/games/move",
-        {
-          gameId,
-          player,
-          position,
-        }
-      );
+      const response = await axios.post(`${backendUrl}api/games/move`, {
+        gameId,
+        player,
+        position,
+      });
       setGameState(response.data);
       setErrorMessage("");
     } catch (error) {
