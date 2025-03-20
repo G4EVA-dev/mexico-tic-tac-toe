@@ -8,7 +8,7 @@ const { query } = require("./db/index"); // Import the query function
 const app = express();
 const server = http.createServer(app);
 
-const frontendUrl = "http://localhost:3000";
+const frontendUrl = "https://mexico-tic-tac-toe.vercel.app";
 
 // Enable CORS for HTTP requests
 app.use(
