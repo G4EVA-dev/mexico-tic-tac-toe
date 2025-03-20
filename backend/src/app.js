@@ -53,6 +53,11 @@ io.on("connection", (socket) => {
   });
 });
 
+// Example route
+app.get("/api/test", (req, res) => {
+  res.json({ message: "CORS is working!" });
+});
+
 // Start the server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {

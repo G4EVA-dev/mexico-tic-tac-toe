@@ -7,7 +7,7 @@ import { io } from "socket.io-client";
 const backendUrl = "https://mexico-tic-tac-toe.onrender.com";
 console.log(`This is the ${backendUrl}`);
 
-const socket = io(`${backendUrl}`, {
+const socket = io(backendUrl, {
   withCredentials: true, // Allow credentials
 });
 
