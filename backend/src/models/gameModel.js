@@ -1,42 +1,89 @@
-const { Pool } = require('pg');
-
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-});
+const { query } = require("../db/index");
 
 class Game {
-    constructor(id, player1, player2, board, currentPlayer, status) {
-        this.id = id;
-        this.player1 = player1;
-        this.player2 = player2;
-        this.board = board;
-        this.currentPlayer = currentPlayer;
-        this.status = status;
-    }
+  constructor(
+    id,
+    gameId,
+    player1,
+    player2,
+    board,
+    currentTurn,
+    status,
+    winner
+  ) {
+    this.id = id;
+    this.gameId = gameId;
+    this.player1 = player1;
+    this.player2 = player2;
+    this.board = board;
+    this.currentTurn = currentTurn;
+    this.status = status;
+    this.winner = winner;
+  }
 
-    static async createGame(player1) {
-        const result = await pool.query(
-            'INSERT INTO games (player1, board, current_player, status) VALUES ($1, $2, $3, $4) RETURNING *',
-            [player1, JSON.stringify(Array(9).fill(null)), player1, 'ongoing']
-        );
-        return new Game(...result.rows[0]);
-    }
+  static async createGame({
+    gameId,
+    player1,
+    player2,
+    board,
+    currentTurn,
+    status,
+  }) {
+    const result = await query(
+      "INSERT INTO games (game_id, player1, player2, board, current_turn, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+      [gameId, player1, player2, board, currentTurn, status]
+    );
 
-    static async getGameById(id) {
-        const result = await pool.query('SELECT * FROM games WHERE id = $1', [id]);
-        if (result.rows.length) {
-            return new Game(...result.rows[0]);
-        }
-        throw new Error('Game not found');
-    }
+    const row = result.rows[0];
+    return new Game(
+      row.id,
+      row.game_id,
+      row.player1,
+      row.player2,
+      row.board,
+      row.current_turn,
+      row.status,
+      row.winner
+    );
+  }
 
-    async updateGame(board, currentPlayer, status) {
-        const result = await pool.query(
-            'UPDATE games SET board = $1, current_player = $2, status = $3 WHERE id = $4 RETURNING *',
-            [JSON.stringify(board), currentPlayer, status, this.id]
-        );
-        Object.assign(this, result.rows[0]);
+  static async getGameById(gameId) {
+    const result = await query("SELECT * FROM games WHERE game_id = $1", [
+      gameId,
+    ]);
+    if (result.rows.length) {
+      const row = result.rows[0];
+      return new Game(
+        row.id,
+        row.game_id,
+        row.player1,
+        row.player2,
+        row.board,
+        row.current_turn,
+        row.status,
+        row.winner
+      );
     }
+    return null;
+  }
+
+  async updateGame(board, currentTurn, status, winner = null) {
+    const result = await query(
+      "UPDATE games SET board = $1, current_turn = $2, status = $3, winner = $4 WHERE game_id = $5 RETURNING *",
+      [board, currentTurn, status, winner, this.gameId]
+    );
+    const row = result.rows[0];
+    Object.assign(this, {
+      id: row.id,
+      gameId: row.game_id,
+      player1: row.player1,
+      player2: row.player2,
+      board: row.board,
+      currentTurn: row.current_turn,
+      status: row.status,
+      winner: row.winner,
+    });
+  }
 }
 
 module.exports = Game;

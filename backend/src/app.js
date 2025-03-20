@@ -3,14 +3,17 @@ const http = require("http");
 const socketIo = require("socket.io");
 const cors = require("cors");
 const gameRoutes = require("./routes/gameRoutes");
+const { query } = require("./db/index"); // Import the query function
 
 const app = express();
 const server = http.createServer(app);
 
+const frontendUrl = "http://localhost:3000";
+
 // Enable CORS for HTTP requests
 app.use(
   cors({
-    origin: "https://mexico-tic-tac-toe.vercel.app", // Ensure this matches your frontend URL exactly
+    origin: frontendUrl, // Ensure this matches your frontend URL exactly
     credentials: true, // Allow cookies and credentials
   })
 );
@@ -21,7 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 // Initialize Socket.IO
 const io = socketIo(server, {
   cors: {
-    origin: "https://mexico-tic-tac-toe.vercel.app", // Ensure this matches your frontend URL exactly
+    origin: frontendUrl, // Ensure this matches your frontend URL exactly
     methods: ["GET", "POST"], // Allowed HTTP methods
     credentials: true, // Allow credentials
   },
@@ -58,6 +61,17 @@ app.get("/api/test", (req, res) => {
   res.json({ message: "CORS is working!" });
 });
 
+app.get("/api/test-db", async (req, res) => {
+  try {
+    const result = await query("SELECT NOW()");
+    res.json({ success: true, time: result.rows[0].now });
+  } catch (error) {
+    console.error("Database connection error:", error);
+    res
+      .status(500)
+      .json({ success: false, error: "Database connection failed" });
+  }
+});
 // Start the server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
